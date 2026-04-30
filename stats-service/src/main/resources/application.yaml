@@ -1,12 +1,14 @@
 server:
   port: 8083
+
 spring:
   application:
     name: stats-service
+
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: http://eureka-server:8761/eureka
   instance:
     prefer-ip-address: true
 
@@ -18,14 +20,12 @@ resilience4j:
         slidingWindowSize: 10
         failureRateThreshold: 50
         waitDurationInOpenState: 10s
-  retry:
-    instances:
-      playerService:
-        maxAttempts: 3
-        waitDuration: 2s
 
 management:
   endpoints:
     web:
       exposure:
         include: health,prometheus
+  endpoint:
+    health:
+      show-details: always
