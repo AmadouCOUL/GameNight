@@ -15,9 +15,24 @@ spec:
       containers:
         - name: player-service
           image: player-service:latest
-          imagePullPolicy: IfNotPresent # Pour éviter l'erreur de pull
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8082
+          env:
+            - name: SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED
+              value: "false"
+            # --- LES DEUX LIGNES QUI MANQUENT POUR EUREKA ---
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://eureka-server:8761/eureka/"
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            # -----------------------------------------------
+          startupProbe:
+            tcpSocket:
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 20
 ---
 apiVersion: v1
 kind: Service
@@ -30,5 +45,5 @@ spec:
     - protocol: TCP
       port: 8082
       targetPort: 8082
-      nodePort: 30082 # Port pour ajouter des joueurs via Postman
+      nodePort: 30082
   type: NodePort

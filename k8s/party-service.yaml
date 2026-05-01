@@ -15,9 +15,18 @@ spec:
       containers:
         - name: party-service
           image: party-service:latest
-          imagePullPolicy: IfNotPresent # Changé de Never à IfNotPresent
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
+          # --- SECTION CRUCIALE POUR EUREKA ---
+          env:
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://eureka-server:8761/eureka/"
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED
+              value: "false"
+          # ------------------------------------
 ---
 apiVersion: v1
 kind: Service
@@ -30,5 +39,5 @@ spec:
     - protocol: TCP
       port: 8081
       targetPort: 8081
-      nodePort: 30081 # Ajouté pour tes tests Postman
+      nodePort: 30081
   type: NodePort

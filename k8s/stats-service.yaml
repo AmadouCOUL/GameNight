@@ -18,6 +18,15 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083
+          # --- CONFIGURATION EUREKA & COMPATIBILITÉ ---
+          env:
+            - name: SPRING_CLOUD_COMPATIBILITY-VERIFIER_ENABLED
+              value: "false"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://eureka-server:8761/eureka/"
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+          # --------------------------------------------
 ---
 apiVersion: v1
 kind: Service
@@ -27,7 +36,8 @@ spec:
   selector:
     app: stats-service
   ports:
-    - port: 8083
+    - protocol: TCP
+      port: 8083
       targetPort: 8083
       nodePort: 30083
   type: NodePort
