@@ -14,8 +14,7 @@ spec:
     spec:
       containers:
         - name: eureka-server
-          image: eureka-server:latest
-          imagePullPolicy: IfNotPresent # Changé ici pour éviter l'erreur ErrImageNeverPull
+          image: gamenight/eureka-server:latest
           ports:
             - containerPort: 8761
 ---
@@ -27,8 +26,5 @@ spec:
   selector:
     app: eureka-server
   ports:
-    - protocol: TCP
-      port: 8761
+    - port: 8761
       targetPort: 8761
-      nodePort: 30761
-  type: NodePort

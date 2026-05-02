@@ -8,18 +8,27 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://eureka-server:8761/eureka/
+      defaultZone: http://eureka-server:8761/eureka
   instance:
     prefer-ip-address: true
+
+services:
+  party-url: http://party-service:8081
+  player-url: http://player-service:8082
 
 resilience4j:
   circuitbreaker:
     instances:
       playerService:
-        registerHealthIndicator: true
-        slidingWindowSize: 10
-        failureRateThreshold: 50
-        waitDurationInOpenState: 10s
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+  retry:
+    instances:
+      playerService:
+        max-attempts: 3
+        wait-duration: 500ms
 
 management:
   endpoints:
@@ -27,5 +36,8 @@ management:
       exposure:
         include: health,prometheus
   endpoint:
-    health:
-      show-details: always
+    prometheus:
+      enabled: true
+  health:
+    circuitbreakers:
+      enabled: true

@@ -1,35 +1,36 @@
 package com.numres.partyservice.controller;
 
-
-
 import com.numres.partyservice.model.Party;
+import com.numres.partyservice.repository.PartyRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequestMapping("/parties")
 public class PartyController {
 
-    private final List<Party> parties = new ArrayList<>();
+    private final PartyRepository repository;
+
+    public PartyController(PartyRepository repository) {
+        this.repository = repository;
+    }
 
     @PostMapping
-    public Party createParty(@RequestBody Party party) {
-        parties.add(party);
-        return party;
+    public Party create(@RequestBody Party party) {
+        return repository.save(party);
     }
 
     @GetMapping
-    public List<Party> getAllParties() {
-        return parties;
+    public List<Party> getAll() {
+        return repository.findAll();
     }
 
     @GetMapping("/{id}")
-    public Party getPartyById(@PathVariable Long id) {
-        return parties.stream()
-                .filter(p -> p.id().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Party not found"));
+    public ResponseEntity<Party> getById(@PathVariable Long id) {
+        return repository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

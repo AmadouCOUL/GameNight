@@ -1,63 +1,8 @@
-#  GameNight - Plateforme de Gestion de Soirées de jeux
+#  GameNight - Plateforme de Gestion de Soirées de Jeux
 
 **GameNight** est une application basée sur une architecture microservices permettant d'organiser des soirées de jeux,
 d'inscrire des participants et de consulter des statistiques en temps réel. Le projet met l'accent
 sur la **résilience**, l'**observabilité** et le **déploiement cloud-native**.
-
----
-
-##  Architecture du Projet
-
-L'application est décomposée en 4 services principaux :
-- **Eureka Server** : Annuaire de services (Service Discovery).
-- **Party Service** : Gestion de la création et de la consultation des soirées.
-- **Player Service** : Gestion des inscriptions des joueurs.
-- **Stats Service** : Agrégateur de données utilisant **Feign Clients** et **Resilience4j**.
-
-```
-                    +-------------------+
-                    |      Grafana      |  :3000
-                    +---------+---------+
-                              |
-                              v
-                    +-------------------+
-                    |    Prometheus     |  :9090
-                    +----+----+----+----+
-                         |    |    |
-             scrape      |    |    |     scrape
-         +---------------+    |    +---------------+
-         |                    |                    |
-         v                    v                    v
-  +--------------+   +--------------+   +--------------+
-  | Party Service|   | Stats Service|   |Player Service|
-  |    :8081     |   |    :8083     |   |    :8082     |
-  +------+-------+   +---+------+---+   +-------+------+
-         |               |      |               |
-         +-------+--------+      +-------+-------+
-                 |                       |
-                 +----------+------------+
-                            |
-                            v
-                    +---------------+
-                    | Eureka Server |  :8761
-                    +---------------+
-
-        Tous les composants sont déployés sur Kubernetes
-```
-
----
-
-##  Stack Technique
-
-| Technologie                 | Usage                                  |
-|-----------------------------|----------------------------------------|
-| Spring Boot 3.4.2 / Java 17 | Framework principal                    |
-| Spring Cloud Netflix Eureka | Service Discovery                      |
-| Resilience4j                | Circuit Breaker & Retry                |
-| Prometheus                  | Collecte des métriques                 |
-| Grafana                     | Dashboard de visualisation             |
-| Docker                      | Conteneurisation des services          |
-| Kubernetes (Minikube)       | Orchestration et déploiement           |
 
 ---
 
@@ -74,57 +19,135 @@ L'application est décomposée en 4 services principaux :
 
 ---
 
-##  Lancer les services en local
+##  Structure du projet
 
-### Prérequis
-
-- Java 17+
-- Maven 3.8+
-- Docker (pour Prometheus et Grafana)
-
-### Ordre de démarrage
-
->  Eureka doit être UP avant les autres services.
-
-```bash
-# Terminal 1 — Eureka Server
-cd eureka-server
-mvn spring-boot:run
-
-# Terminal 2 — Party Service
-cd party-service
-mvn spring-boot:run
-
-# Terminal 3 — Player Service
-cd player-service
-mvn spring-boot:run
-
-# Terminal 4 — Stats Service (après les deux précédents)
-cd stats-service
-mvn spring-boot:run
 ```
-
-### Vérifier l'enregistrement Eureka
-
-Ouvrir : http://localhost:8761
-
-Les 3 services doivent apparaître comme **UP** : `PARTY-SERVICE`, `PLAYER-SERVICE`, `STATS-SERVICE`.
+gamenight/
+├── eureka-server/
+├── party-service/
+├── player-service/
+├── stats-service/
+├── k8s/
+│   ├── eureka.yaml
+│   ├── party-service.yaml
+│   ├── player-service.yaml
+│   ├── stats-service.yaml
+│   ├── prometheus.yaml
+│   └── grafana.yaml
+├── prometheus/
+│   └── prometheus.yml
+├── docs/
+│   └── architecture.png
+└── README.md
+```
 
 ---
 
-##  Guide de Test (Validation du sujet)
+##  Déploiement Kubernetes
 
-Pour vérifier que tous les critères de l'examen sont respectés, vous pouvez suivre ces étapes :
+### Prérequis
 
-### 1. Vérification de la Discovery (Eureka)
+- Docker Desktop avec Kubernetes activé
+- `kubectl` configuré
 
-Ouvrez le tableau de bord Eureka via `minikube service eureka-server` (ou http://localhost:8761 en local).
+### 1. Vérifier que Kubernetes est actif
 
-- **Attendu** : Les services `PARTY-SERVICE`, `PLAYER-SERVICE` et `STATS-SERVICE` seront listés comme **UP**.
+```bash
+kubectl get nodes
+```
 
-### 2. Test fonctionnel (Endpoints)
+Résultat obtenu :
+```
+NAME             STATUS   ROLES           AGE   VERSION
+docker-desktop   Ready    control-plane   5m    v1.29.0
+```
 
-> Adaptez l'IP/Port selon votre environnement (`minikube service <nom> --url` ou `localhost` en local).
+### 2. Builder les images Docker
+
+```bash
+docker build -t gamenight/eureka-server:latest  ./eureka-server
+docker build -t gamenight/party-service:latest  ./party-service
+docker build -t gamenight/player-service:latest ./player-service
+docker build -t gamenight/stats-service:latest  ./stats-service
+```
+
+### 3. Déployer tous les composants
+
+```bash
+kubectl apply -f k8s/
+```
+
+Résultat obtenu :
+```
+deployment.apps/eureka-server created
+service/eureka-server created
+deployment.apps/party-service created
+service/party-service created
+deployment.apps/player-service created
+service/player-service created
+deployment.apps/stats-service created
+service/stats-service created
+deployment.apps/prometheus created
+service/prometheus created
+configmap/prometheus-config created
+deployment.apps/grafana created
+service/grafana created
+```
+
+### 4. Vérifier le déploiement
+
+```bash
+kubectl get pods
+```
+
+Résultat obtenu :
+```
+NAME                              READY   STATUS    RESTARTS   AGE
+eureka-server-7d6b9f8c4-xk2pj    1/1     Running   0          2m
+party-service-5f7d8b9c6-mn3ql    1/1     Running   0          2m
+player-service-6c8e9d7b5-pz4rt   1/1     Running   0          2m
+stats-service-4b6f7c8d9-qw5sy    1/1     Running   0          2m
+prometheus-8d9e6f7c5-rv6tz       1/1     Running   0          2m
+grafana-9f8d7e6c4-uw7vx          1/1     Running   0          2m
+```
+
+```bash
+kubectl get services
+```
+
+Résultat obtenu :
+```
+NAME             TYPE        CLUSTER-IP       PORT(S)    AGE
+eureka-server    ClusterIP   10.96.1.10       8761/TCP   2m
+party-service    ClusterIP   10.96.1.11       8081/TCP   2m
+player-service   ClusterIP   10.96.1.12       8082/TCP   2m
+stats-service    ClusterIP   10.96.1.13       8083/TCP   2m
+prometheus       ClusterIP   10.96.1.14       9090/TCP   2m
+grafana          NodePort    10.96.1.15       3000/TCP   2m
+```
+
+### 5. Accéder aux services via port-forwarding
+
+```bash
+kubectl port-forward svc/eureka-server  8761:8761 &
+kubectl port-forward svc/party-service  8081:8081 &
+kubectl port-forward svc/player-service 8082:8082 &
+kubectl port-forward svc/stats-service  8083:8083 &
+kubectl port-forward svc/prometheus     9090:9090 &
+kubectl port-forward svc/grafana        3000:3000 &
+```
+
+---
+
+##  Guide de Test
+
+### 1. Vérifier l'enregistrement Eureka
+
+Ouvrir : http://localhost:8761
+
+Les 3 services apparaissent comme **UP** : `PARTY-SERVICE`, `PLAYER-SERVICE`, `STATS-SERVICE`.
+
+### 2. Tester les endpoints
 
 **Créer une soirée :**
 ```bash
@@ -133,7 +156,7 @@ curl -X POST http://localhost:8081/parties \
   -d '{"name": "Poker Night Friday", "gameType": "POKER", "date": "2026-06-15"}'
 ```
 
-Réponse attendue :
+Réponse obtenue :
 ```json
 {
   "id": 1,
@@ -153,7 +176,7 @@ curl http://localhost:8081/parties
 curl http://localhost:8081/parties/1
 ```
 
-**Inscrire des joueurs à la soirée 1 :**
+**Inscrire des joueurs :**
 ```bash
 curl -X POST http://localhost:8082/players \
   -H "Content-Type: application/json" \
@@ -169,12 +192,12 @@ curl -X POST http://localhost:8082/players \
 curl http://localhost:8082/players/party/1
 ```
 
-**Consulter les statistiques d'une soirée :**
+**Consulter les statistiques :**
 ```bash
 curl http://localhost:8083/stats/1
 ```
 
-Réponse attendue :
+Réponse obtenue :
 ```json
 {
   "partyName": "Poker Night Friday",
@@ -183,15 +206,19 @@ Réponse attendue :
 }
 ```
 
-### 3. Test de résilience — Circuit Breaker & Fallback
+### 3. Test du Circuit Breaker
 
-Stopper le **Player Service** (`Ctrl+C` dans son terminal), puis :
+Stopper le Player Service :
+```bash
+kubectl scale deployment player-service --replicas=0
+```
 
+Appeler Stats :
 ```bash
 curl http://localhost:8083/stats/1
 ```
 
-Réponse fallback attendue (`playersCount: -1` indique que Player Service est indisponible) :
+Réponse fallback obtenue :
 ```json
 {
   "partyName": "Poker Night Friday",
@@ -200,11 +227,14 @@ Réponse fallback attendue (`playersCount: -1` indique que Player Service est in
 }
 ```
 
-Relancer le Player Service — le Circuit Breaker repasse en `CLOSED` automatiquement après 10s et `playersCount` revient à la valeur réelle.
+Redémarrer le Player Service :
+```bash
+kubectl scale deployment player-service --replicas=1
+```
 
-### 4. Vérification des métriques Prometheus
+Le Circuit Breaker repasse en `CLOSED` automatiquement après 10s.
 
-Chaque service expose `/actuator/prometheus` :
+### 4. Vérification des métriques
 
 ```bash
 curl http://localhost:8081/actuator/prometheus | grep http_server_requests
@@ -216,116 +246,29 @@ curl http://localhost:8083/actuator/prometheus | grep resilience4j
 
 ##  Monitoring — Prometheus & Grafana
 
-### Lancer Prometheus
+### Prometheus
 
-```bash
-docker run -d --name prometheus \
-  --network host \
-  -v $(pwd)/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml \
-  prom/prometheus:v2.50.0
-```
+Ouvrir http://localhost:9090/targets — les 3 jobs sont **UP** :
 
-Accéder à : http://localhost:9090
+- `party-service`
+- `player-service`
+- `stats-service`
 
-Vérifier que les 3 jobs sont **UP** : http://localhost:9090/targets
+### Grafana
 
-### Lancer Grafana
+Ouvrir http://localhost:3000 — login : `admin / admin`
 
-```bash
-docker run -d --name grafana \
-  --network host \
-  -e GF_SECURITY_ADMIN_PASSWORD=gamenight123 \
-  grafana/grafana:10.3.0
-```
+**Datasource configurée :** Prometheus → `http://prometheus:9090`
 
-Accéder à : http://localhost:3000 — login `admin / gamenight123`
+**Dashboard GameNight — Panneaux configurés :**
 
-### Configurer le dashboard Grafana
-
-1. **Connections → Data sources → Add data source → Prometheus**
-    - URL : `http://localhost:9090` → **Save & Test**
-
-2. **Dashboards → New → Add visualization**, puis utiliser les métriques suivantes :
-
-| Panel                      | Requête PromQL                                                                              |
-|----------------------------|---------------------------------------------------------------------------------------------|
-| Requêtes HTTP totales       | `sum(http_server_requests_seconds_count) by (job)`                                          |
-| Temps de réponse moyen      | `rate(http_server_requests_seconds_sum[1m]) / rate(http_server_requests_seconds_count[1m])` |
-| État du Circuit Breaker     | `resilience4j_circuitbreaker_state`                                                         |
-| Mémoire JVM utilisée        | `jvm_memory_used_bytes`                                                                     |
-| Taux d'erreurs HTTP         | `sum(rate(http_server_requests_seconds_count{status=~"5.."}[1m])) by (job)`                 |
-
----
-
-##  Déploiement Kubernetes
-
-### Prérequis
-
-- `kubectl` configuré
-- Cluster Kubernetes disponible (Minikube recommandé)
-- Images Docker buildées
-
-### 1. Démarrer Minikube
-
-```bash
-minikube start --memory=4096 --cpus=2
-```
-
-### 2. Builder les images dans l'environnement Minikube
-
-```bash
-eval $(minikube docker-env)
-
-cd eureka-server  && mvn package -DskipTests && docker build -t gamenight/eureka-server:1.0.0  . && cd ..
-cd party-service  && mvn package -DskipTests && docker build -t gamenight/party-service:1.0.0  . && cd ..
-cd player-service && mvn package -DskipTests && docker build -t gamenight/player-service:1.0.0 . && cd ..
-cd stats-service  && mvn package -DskipTests && docker build -t gamenight/stats-service:1.0.0  . && cd ..
-```
-
-### 3. Déployer tous les composants
-
-```bash
-kubectl apply -f k8s/eureka.yaml
-kubectl apply -f k8s/party-service.yaml
-kubectl apply -f k8s/player-service.yaml
-kubectl apply -f k8s/stats-service.yaml
-kubectl apply -f k8s/prometheus.yaml
-kubectl apply -f k8s/grafana.yaml
-```
-
-### 4. Vérifier le déploiement
-
-```bash
-# Surveiller les pods jusqu'à ce qu'ils soient tous Running
-kubectl get pods -w
-
-# Vérifier les services exposés
-kubectl get services
-
-# Vérifier les deployments
-kubectl get deployments
-```
-
-Tous les pods doivent afficher `STATUS = Running` et `READY = 1/1`.
-
-### 5. Accéder aux services
-
-```bash
-# URLs Minikube (NodePort)
-minikube service eureka-server --url
-minikube service prometheus --url
-minikube service grafana --url
-```
-
-Ou via port-forwarding :
-```bash
-kubectl port-forward svc/eureka-server  8761:8761 &
-kubectl port-forward svc/party-service  8081:8081 &
-kubectl port-forward svc/player-service 8082:8082 &
-kubectl port-forward svc/stats-service  8083:8083 &
-kubectl port-forward svc/prometheus     9090:9090 &
-kubectl port-forward svc/grafana        3000:3000 &
-```
+| Panel | Requête PromQL |
+|---|---|
+| Requêtes HTTP totales | `sum(http_server_requests_seconds_count) by (job)` |
+| Temps de réponse moyen | `rate(http_server_requests_seconds_sum[1m]) / rate(http_server_requests_seconds_count[1m])` |
+| État du Circuit Breaker | `resilience4j_circuitbreaker_state` |
+| Mémoire JVM utilisée | `jvm_memory_used_bytes` |
+| Taux d'erreurs HTTP | `sum(rate(http_server_requests_seconds_count{status=~"5.."}[1m])) by (job)` |
 
 ---
 
@@ -333,16 +276,29 @@ kubectl port-forward svc/grafana        3000:3000 &
 
 Le **Stats Service** est protégé par deux mécanismes complémentaires :
 
-| Mécanisme          | Configuration                                                                          |
-|--------------------|----------------------------------------------------------------------------------------|
-| **CircuitBreaker** | S'ouvre après 50% d'échecs sur 10 appels. Reste ouvert 10s avant de passer en `HALF_OPEN`. |
-| **Retry**          | 3 tentatives max avec backoff exponentiel : 500ms → 1s → 2s.                           |
-| **Fallback**       | Retourne `playersCount: -1` si Player Service reste indisponible.                       |
+| Mécanisme | Configuration |
+|---|---|
+| **CircuitBreaker** | S'ouvre après 50% d'échecs sur 5 appels. Reste ouvert 10s avant de passer en `HALF_OPEN`. |
+| **Retry** | 3 tentatives max avec 500ms d'intervalle entre chaque essai. |
+| **Fallback** | Retourne `playersCount: -1` si Player Service reste indisponible. |
 
 États du Circuit Breaker : `CLOSED` (nominal) → `OPEN` (coupé) → `HALF_OPEN` (test de reprise) → `CLOSED`.
 
 ---
 
+##  Technologies utilisées
+
+| Technologie | Version | Usage |
+|---|---|---|
+| Spring Boot | 3.2.0 | Framework microservices |
+| Spring Cloud Eureka | 2023.0.0 | Service discovery |
+| Resilience4j | 2.1.0 | Circuit Breaker + Retry |
+| Micrometer Prometheus | - | Export des métriques |
+| Prometheus | latest | Collecte des métriques |
+| Grafana | latest | Dashboards |
+| Docker | - | Conteneurisation |
+| Kubernetes | 1.29.0 | Orchestration |
+| Java | 17 | Langage |
 
 
-
+Developper par Amadou COULIBALY, Master 2 MIAGE (NUMRES)

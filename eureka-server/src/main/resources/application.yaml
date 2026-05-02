@@ -7,25 +7,13 @@ spring:
 
 eureka:
   client:
-    # Le serveur ne s'enregistre pas lui-même
     register-with-eureka: false
     fetch-registry: false
-  instance:
-    # Aide Prometheus à identifier l'instance par son IP dans le cluster
-    prefer-ip-address: true
+  server:
+    wait-time-in-ms-when-sync-empty: 0
 
 management:
   endpoints:
     web:
       exposure:
-        include: health, prometheus
-  endpoint:
-    health:
-      show-details: always
-    prometheus:
-      enabled: true
-  # Nouvelle syntaxe Spring Boot 3.x pour éviter le message 'Deprecated'
-  prometheus:
-    metrics:
-      export:
-        enabled: true
+        include: health,info
